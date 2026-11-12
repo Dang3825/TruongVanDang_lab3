@@ -1,0 +1,934 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RUNNER - Hệ thống giám sát</title>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    background: #f1f5f9;
+    padding: 25px;
+    color: #1e293b;
+}
+
+.container {
+    max-width: 1100px;
+    margin: auto;
+}
+
+header {
+    background: #123c69;
+    color: white;
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 22px;
+}
+
+header h1 {
+    font-size: 27px;
+    margin-bottom: 8px;
+}
+
+header p {
+    color: #dbeafe;
+}
+
+.connection {
+    margin-top: 15px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #ef4444;
+}
+
+.status-text {
+    font-size: 14px;
+}
+
+.section-title {
+    margin: 22px 0 14px;
+    font-size: 19px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.card {
+    background: white;
+    padding: 22px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px #0000000c;
+}
+
+.card h3 {
+    color: #64748b;
+    font-size: 15px;
+    margin-bottom: 15px;
+}
+
+.value {
+    font-size: 30px;
+    font-weight: bold;
+    color: #123c69;
+}
+
+.unit {
+    font-size: 14px;
+    color: #64748b;
+}
+
+.panel {
+    background: white;
+    border-radius: 12px;
+    padding: 22px;
+    margin-top: 20px;
+    box-shadow: 0 2px 8px #0000000c;
+}
+
+.chart-container {
+    height: 260px;
+    position: relative;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+}
+
+.control-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+.control-box h3 {
+    margin-bottom: 15px;
+}
+
+button {
+    border: none;
+    padding: 12px 25px;
+    border-radius: 7px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    background: #64748b;
+    min-width: 110px;
+}
+
+button.on {
+    background: #16a34a;
+}
+
+button.off {
+    background: #64748b;
+}
+
+button:disabled {
+    background: #cbd5e1;
+    cursor: not-allowed;
+}
+
+.device-status {
+    margin-top: 12px;
+    color: #475569;
+    font-size: 14px;
+}
+
+.mode {
+    display: inline-block;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-weight: bold;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.mode.auto {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.alert {
+    padding: 15px;
+    border-radius: 8px;
+    margin-top: 15px;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.alert.danger {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.info {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 15px;
+}
+
+@media(max-width:700px) {
+    body {
+        padding: 12px;
+    }
+
+    .cards {
+        grid-template-columns: 1fr;
+    }
+
+    .controls {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <h1>RUNNER MONITORING SYSTEM</h1>
+        <p>Hệ thống giám sát và cảnh báo người chạy</p>
+
+        <div class="connection">
+            <span class="dot" id="connectionDot"></span>
+            <span class="status-text" id="connectionText">
+                Đang kết nối MQTT...
+            </span>
+        </div>
+    </header>
+
+    <h2 class="section-title">1. Dữ liệu cảm biến</h2>
+
+    <div class="cards">
+
+        <div class="card">
+            <h3>🌡️ NHIỆT ĐỘ</h3>
+            <div class="value">
+                <span id="temperature">--</span>
+                <span class="unit">°C</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🌤️ ÁP SUẤT</h3>
+            <div class="value">
+                <span id="pressure">--</span>
+                <span class="unit">hPa</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>⛰️ ĐỘ CAO</h3>
+            <div class="value">
+                <span id="altitude">--</span>
+                <span class="unit">m</span>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="panel">
+        <h2>2. Trạng thái hệ thống</h2>
+
+        <p style="margin-top:18px">
+            Chế độ hoạt động:
+            <span class="mode" id="mode">MANUAL</span>
+        </p>
+
+        <div class="alert" id="alert">
+            Đang chờ dữ liệu cảm biến...
+        </div>
+
+        <p class="info">
+            Cập nhật lần cuối:
+            <span id="lastUpdate">Chưa có dữ liệu</span>
+        </p>
+    </div>
+
+    <div class="panel">
+        <h2>3. Biểu đồ nhiệt độ</h2>
+        <div class="chart-container">
+            <canvas id="temperatureChart"></canvas>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>4. Biểu đồ độ cao</h2>
+        <div class="chart-container">
+            <canvas id="altitudeChart"></canvas>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2>5. Điều khiển thiết bị</h2>
+
+        <div class="controls" style="margin-top:20px">
+
+            <div class="control-box">
+                <h3>💡 Điều khiển LED</h3>
+
+                <button
+                    id="ledButton"
+                    class="off"
+                    onclick="toggleLED()"
+                    disabled>
+                    BẬT LED
+                </button>
+
+                <div class="device-status">
+                    Trạng thái:
+                    <span id="ledStatus">OFF</span>
+                </div>
+            </div>
+
+            <div class="control-box">
+                <h3>🔔 Điều khiển BUZZER</h3>
+
+                <button
+                    id="buzzerButton"
+                    class="off"
+                    onclick="toggleBuzzer()"
+                    disabled>
+                    BẬT BUZZER
+                </button>
+
+                <div class="device-status">
+                    Trạng thái:
+                    <span id="buzzerStatus">OFF</span>
+                </div>
+            </div>
+
+        </div>
+
+        <p class="info" id="controlInfo">
+            Đang chờ kết nối MQTT...
+        </p>
+    </div>
+
+</div>
+
+<script>
+
+// ==================================================
+// 1. MQTT CONFIG
+// ==================================================
+
+const broker = "wss://broker.hivemq.com:8884/mqtt";
+
+const topicData = "runner/data";
+
+const topicLED = "runner/control/led";
+const topicBuzzer = "runner/control/buzzer";
+
+const topicLedStatus = "runner/status/led";
+const topicBuzzerStatus = "runner/status/buzzer";
+const topicLedMode = "runner/status/led_mode";
+
+const clientId = "RunnerWeb-" +
+    Math.random().toString(16).substring(2, 10);
+
+// ==================================================
+// 2. TRANG THAI HE THONG
+// ==================================================
+
+let ledState = false;
+let buzzerState = false;
+let autoMode = false;
+
+const connectionDot =
+    document.getElementById("connectionDot");
+
+const connectionText =
+    document.getElementById("connectionText");
+
+const alertBox =
+    document.getElementById("alert");
+
+const modeElement =
+    document.getElementById("mode");
+
+const controlInfo =
+    document.getElementById("controlInfo");
+
+const lastUpdate =
+    document.getElementById("lastUpdate");
+
+// ==================================================
+// 3. KHOI TAO MQTT
+// ==================================================
+
+const client = mqtt.connect(broker, {
+    clientId: clientId,
+    clean: true,
+    connectTimeout: 10000,
+    reconnectPeriod: 3000,
+    protocolVersion: 4
+});
+
+// ==================================================
+// 4. CAP NHAT KET NOI MQTT
+// ==================================================
+
+function setConnection(connected) {
+
+    if (connected) {
+
+        connectionText.textContent = "Đã kết nối MQTT";
+
+        connectionDot.style.background = "#16a34a";
+
+    } else {
+
+        connectionText.textContent = "Mất kết nối MQTT";
+
+        connectionDot.style.background = "#ef4444";
+    }
+
+    updateButtons();
+}
+
+// ==================================================
+// 5. KHOI TAO BIEU DO
+// ==================================================
+
+function createChart(canvasId, label, color, unit) {
+
+    const canvas = document.getElementById(canvasId);
+
+    if (!canvas || typeof Chart === "undefined") {
+        console.error("Không thể khởi tạo biểu đồ:", canvasId);
+        return null;
+    }
+
+    return new Chart(canvas, {
+
+        type: "line",
+
+        data: {
+            labels: [],
+
+            datasets: [{
+                label: label,
+                data: [],
+                borderColor: color,
+                backgroundColor: color + "22",
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 2
+            }]
+        },
+
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+
+            interaction: {
+                intersect: false,
+                mode: "index"
+            },
+
+            plugins: {
+                legend: {
+                    display: true
+                }
+            },
+
+            scales: {
+                y: {
+                    title: {
+                        display: true,
+                        text: unit
+                    }
+                },
+
+                x: {
+                    title: {
+                        display: true,
+                        text: "Thời gian"
+                    }
+                }
+            }
+        }
+    });
+}
+
+const tempChart = createChart(
+    "temperatureChart",
+    "Nhiệt độ",
+    "#ef4444",
+    "°C"
+);
+
+const altitudeChart = createChart(
+    "altitudeChart",
+    "Độ cao",
+    "#16a34a",
+    "m"
+);
+
+// ==================================================
+// 6. CAP NHAT DU LIEU BIEU DO
+// ==================================================
+
+function addChartData(chart, value, time) {
+
+    if (!chart) return;
+
+    chart.data.labels.push(time);
+
+    chart.data.datasets[0].data.push(value);
+
+    // Chi hien thi toi da 20 mau gan nhat
+    if (chart.data.labels.length > 20) {
+
+        chart.data.labels.shift();
+
+        chart.data.datasets[0].data.shift();
+    }
+
+    chart.update("none");
+}
+
+// ==================================================
+// 7. CAP NHAT DU LIEU CAM BIEN
+// ==================================================
+
+function updateSensorData(data) {
+
+    const temperature = Number(data.temperature);
+    const pressure = Number(data.pressure);
+    const altitude = Number(data.altitude);
+
+    // Kiem tra du lieu nhan duoc
+    if (
+        !Number.isFinite(temperature) ||
+        !Number.isFinite(pressure) ||
+        !Number.isFinite(altitude)
+    ) {
+
+        console.error("Dữ liệu cảm biến không hợp lệ:", data);
+
+        return;
+    }
+
+    // Cap nhat nhiet do
+    document.getElementById("temperature").textContent =
+        temperature.toFixed(2);
+
+    // Cap nhat ap suat
+    document.getElementById("pressure").textContent =
+        pressure.toFixed(2);
+
+    // Cap nhat do cao
+    document.getElementById("altitude").textContent =
+        altitude.toFixed(2);
+
+    // Lay thoi gian hien tai
+    const now = new Date();
+
+    const time = now.toLocaleTimeString("vi-VN");
+
+    lastUpdate.textContent =
+        now.toLocaleString("vi-VN");
+
+    // Cap nhat bieu do
+    addChartData(tempChart, temperature, time);
+
+    addChartData(altitudeChart, altitude, time);
+
+    // Cap nhat canh bao
+    updateAlert(temperature);
+
+    console.log("Đã cập nhật dữ liệu cảm biến:", data);
+}
+
+// ==================================================
+// 8. CAP NHAT CANH BAO
+// ==================================================
+
+function updateAlert(temperature) {
+
+    let messages = [];
+
+    if (temperature > 35 || temperature < 10) {
+
+        messages.push("NHIỆT ĐỘ BẤT THƯỜNG");
+    }
+
+    if (autoMode) {
+
+        messages.push("HỆ THỐNG ĐANG CẢNH BÁO TỰ ĐỘNG");
+    }
+
+    if (messages.length > 0) {
+
+        alertBox.textContent =
+            "⚠ " + messages.join(" | ");
+
+        alertBox.className = "alert danger";
+
+    } else {
+
+        alertBox.textContent =
+            "✓ Hệ thống đang hoạt động bình thường";
+
+        alertBox.className = "alert";
+    }
+}
+
+// ==================================================
+// 9. CAP NHAT TRANG THAI LED
+// ==================================================
+
+function updateLED(state) {
+
+    ledState = state === "ON";
+
+    const button =
+        document.getElementById("ledButton");
+
+    const status =
+        document.getElementById("ledStatus");
+
+    button.textContent =
+        ledState ? "TẮT LED" : "BẬT LED";
+
+    button.className =
+        ledState ? "on" : "off";
+
+    status.textContent =
+        ledState ? "ON" : "OFF";
+
+    updateButtons();
+}
+
+// ==================================================
+// 10. CAP NHAT TRANG THAI BUZZER
+// ==================================================
+
+function updateBuzzer(state) {
+
+    buzzerState = state === "ON";
+
+    const button =
+        document.getElementById("buzzerButton");
+
+    const status =
+        document.getElementById("buzzerStatus");
+
+    button.textContent =
+        buzzerState ? "TẮT BUZZER" : "BẬT BUZZER";
+
+    button.className =
+        buzzerState ? "on" : "off";
+
+    status.textContent =
+        buzzerState ? "ON" : "OFF";
+
+    updateButtons();
+}
+
+// ==================================================
+// 11. CAP NHAT CHE DO AUTO / MANUAL
+// ==================================================
+
+function updateMode(mode) {
+
+    const previousMode = autoMode;
+
+    autoMode = mode.trim().toUpperCase() === "AUTO";
+
+    // Cap nhat giao dien che do
+    modeElement.textContent =
+        autoMode ? "AUTO" : "MANUAL";
+
+    modeElement.className =
+        autoMode ? "mode auto" : "mode";
+
+    // Khi chuyen AUTO sang MANUAL,
+    // giao dien LED phai tro ve OFF
+    if (previousMode && !autoMode) {
+
+        updateLED("OFF");
+    }
+
+    // Thong bao trang thai dieu khien
+    if (autoMode) {
+
+        controlInfo.textContent =
+            "Chế độ AUTO: Hệ thống tự động điều khiển LED và BUZZER. Người dùng không thể điều khiển bằng nút bấm.";
+
+    } else {
+
+        controlInfo.textContent =
+            client.connected
+            ? "Chế độ MANUAL: Người dùng có thể điều khiển LED và BUZZER."
+            : "Mất kết nối MQTT: Không thể điều khiển thiết bị.";
+    }
+
+    updateButtons();
+
+    // Cap nhat lai canh bao
+    const temperatureText =
+        document.getElementById("temperature").textContent;
+
+    if (temperatureText !== "--") {
+
+        updateAlert(Number(temperatureText));
+
+    } else if (autoMode) {
+
+        alertBox.textContent =
+            "⚠ HỆ THỐNG ĐANG CẢNH BÁO TỰ ĐỘNG";
+
+        alertBox.className = "alert danger";
+    }
+
+    console.log("Chế độ hiện tại:", autoMode ? "AUTO" : "MANUAL");
+}
+
+// ==================================================
+// 12. KHOA / MO NUT DIEU KHIEN
+// ==================================================
+
+function updateButtons() {
+
+    const ledButton =
+        document.getElementById("ledButton");
+
+    const buzzerButton =
+        document.getElementById("buzzerButton");
+
+    const disabled = !client.connected || autoMode;
+
+    ledButton.disabled = disabled;
+
+    buzzerButton.disabled = disabled;
+
+    if (autoMode) {
+
+        controlInfo.textContent =
+            "Chế độ AUTO: Không thể điều khiển thiết bị bằng nút bấm.";
+
+    } else if (!client.connected) {
+
+        controlInfo.textContent =
+            "Mất kết nối MQTT: Không thể điều khiển thiết bị.";
+
+    } else {
+
+        controlInfo.textContent =
+            "Chế độ MANUAL: Người dùng có thể điều khiển LED và BUZZER.";
+    }
+}
+
+// ==================================================
+// 13. MQTT CONNECT
+// ==================================================
+
+client.on("connect", function () {
+
+    console.log("MQTT connected");
+
+    setConnection(true);
+
+    // Dang ky cac topic
+    client.subscribe([
+        topicData,
+        topicLedStatus,
+        topicBuzzerStatus,
+        topicLedMode
+    ], function(err) {
+
+        if (err) {
+
+            console.error("Lỗi đăng ký topic:", err);
+
+        } else {
+
+            console.log("Đã đăng ký tất cả topic");
+        }
+    });
+});
+
+client.on("reconnect", function () {
+
+    console.log("Đang kết nối lại MQTT...");
+
+    setConnection(false);
+});
+
+client.on("offline", function () {
+
+    console.log("MQTT offline");
+
+    setConnection(false);
+});
+
+client.on("close", function () {
+
+    console.log("MQTT disconnected");
+
+    setConnection(false);
+});
+
+client.on("error", function (error) {
+
+    console.error("MQTT error:", error);
+
+    setConnection(false);
+});
+
+// ==================================================
+// 14. NHAN DU LIEU MQTT
+// ==================================================
+
+client.on("message", function (topic, payload) {
+
+    const value = payload.toString().trim();
+
+    console.log("MQTT:", topic, value);
+
+    // ----------------------------------------------
+    // NHAN DU LIEU CAM BIEN
+    // ----------------------------------------------
+
+    if (topic === topicData) {
+
+        try {
+
+            const data = JSON.parse(value);
+
+            updateSensorData(data);
+
+        } catch (error) {
+
+            console.error("Lỗi đọc dữ liệu JSON:", error);
+        }
+    }
+
+    // ----------------------------------------------
+    // NHAN TRANG THAI LED
+    // ----------------------------------------------
+
+    else if (topic === topicLedStatus) {
+
+        updateLED(value.toUpperCase());
+    }
+
+    // ----------------------------------------------
+    // NHAN TRANG THAI BUZZER
+    // ----------------------------------------------
+
+    else if (topic === topicBuzzerStatus) {
+
+        updateBuzzer(value.toUpperCase());
+    }
+
+    // ----------------------------------------------
+    // NHAN CHE DO AUTO / MANUAL
+    // ----------------------------------------------
+
+    else if (topic === topicLedMode) {
+
+        updateMode(value);
+    }
+});
+
+// ==================================================
+// 15. DIEU KHIEN LED
+// ==================================================
+
+function toggleLED() {
+
+    // Khong cho dieu khien neu mat ket noi
+    // hoac dang o che do AUTO
+    if (!client.connected || autoMode) return;
+
+    const newState = !ledState;
+
+    const command = newState ? "ON" : "OFF";
+
+    // Cap nhat giao dien ngay lap tuc
+    updateLED(command);
+
+    // Gui lenh den ESP32
+    client.publish(topicLED, command, function(err) {
+
+        if (err) {
+
+            console.error("Không gửi được lệnh LED:", err);
+        }
+    });
+
+    console.log("Gui lenh LED:", command);
+}
+
+// ==================================================
+// 16. DIEU KHIEN BUZZER
+// ==================================================
+
+function toggleBuzzer() {
+
+    if (!client.connected || autoMode) return;
+
+    const newState = !buzzerState;
+
+    const command = newState ? "ON" : "OFF";
+
+    // Cap nhat giao dien ngay lap tuc
+    updateBuzzer(command);
+
+    // Gui lenh den ESP32
+    client.publish(topicBuzzer, command, function(err) {
+
+        if (err) {
+
+            console.error("Không gửi được lệnh BUZZER:", err);
+        }
+    });
+
+    console.log("Gui lenh BUZZER:", command);
+}
+
+// ==================================================
+// 17. KHOI TAO GIAO DIEN
+// ==================================================
+
+updateLED("OFF");
+
+updateBuzzer("OFF");
+
+updateButtons();
+
+</script>
+
+</body>
+</html>
