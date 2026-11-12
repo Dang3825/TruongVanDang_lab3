@@ -15,25 +15,13 @@ Dự án xây dựng mạch giám sát và cảnh báo người chạy (Runner) 
 Dữ liệu được xử lý trên ESP32, hiển thị qua Serial Monitor và truyền lên MQTT Broker thông qua Wi-Fi để theo dõi trên giao diện Web.
 
 ## 2. Chức năng chính
-
-    Đo nhiệt độ và áp suất khí quyển bằng cảm biến BMP180.
-    Tính toán độ cao dựa trên áp suất khí quyển.
-    Hiển thị dữ liệu trên Thiết kế Mạch Giám sát và cảnh báo người chạy (runner). Mạch này sử dụng ESP32 đọc dữ liệu nhiệt độ và áp lực khí quyển => độ cao (so với mực nước biển) từ cảm biến BMP180, hiển thị dữ liệu qua giao tiếp serial. Đồng thời ESP32 gửi dữ liệu lên MQTT Broker qua Wifi và hiển thị dữ liệu trên Web/App. Yêu cầu thực hiện:
-    - Vẽ mạch kết nối trong Wokwi.
-    - Thiết kế giao diện trên Web/App với các dữ liệu đọc được từ Broker hiển thị trên thẻ html "class" và nút “button” để điều khiển cơ cấu chấp hành:
-    + Các thẻ html hiển thị dữ liệu nhiệt độ, áp lực khí quyển và độ cao (so với mực nước biển) dạng số.
-    + 2 biểu đồ cập nhật dữ liệu nhiệt độ và độ cao, trực tiếp theo thời gian thực (tùy chọn).
-    + 2 nút button để điều khiển trạng thái Led và Loa cảnh báo (chế độ manual).
-    - Xây dựng hệ RTOS cho hoạt động của ESP32, với các yêu cầu:
-    + “Task truyền data”: kết nối Wifi chạy Core 0, nếu thành công, đọc dữ liệu từ hàng đợi “data Queue”, và gửi lên MQTT broker.
-    + “Task đọc data”, chạy Core 1: đọc dữ liệu cảm biến BMP180, hiển thị dữ liệu qua giao tiếp serial, gửi dữ liệu đầy đủ vào hàng đợi “data Queue” và dữ liệu cảnh báo gồm nhiệt độ + độ cao vào hàng đợi “data Alert”
-    + “Tast cảnh báo”, chạy Core 1: đọc dữ liệu tử hàng đợi “data Alert” , và thực hiện Cảnh báo bằng Còi/Đèn khi nhiệt độ người chạy (runner) quá ngưỡng hoặc dưới ngưỡng & Cảnh báo khi có sự thay đổi độ cao đột ngột.Serial Monitor.
-    - Truyền dữ liệu cảm biến lên MQTT Broker.
-    - Hiển thị nhiệt độ, áp suất và độ cao trên giao diện Web.
-    - Tự động cảnh báo bằng LED và Buzzer khi phát hiện thông số bất thường.
-    - Điều khiển LED và Buzzer từ giao diện Web ở chế độ MANUAL.
-    - Sử dụng FreeRTOS để thực hiện nhiều Task đồng thời.
-
+- Đo nhiệt độ, áp suất khí quyển bằng cảm biến BMP180 và tính toán độ cao.
+- Hiển thị dữ liệu trên Serial Monitor và giao diện Web.
+- Truyền dữ liệu cảm biến lên MQTT Broker thông qua Wi-Fi.
+- Thiết kế giao diện Web hiển thị các thông số và biểu đồ theo thời gian thực, hỗ trợ điều khiển LED và Buzzer ở chế độ MANUAL.
+- Tự động cảnh báo bằng LED và Buzzer khi nhiệt độ vượt ngưỡng hoặc độ cao thay đổi đột ngột.
+- Sử dụng FreeRTOS với 3 Task: đọc dữ liệu, truyền dữ liệu và xử lý cảnh báo, kết hợp 2 Queue để trao đổi dữ liệu.
+- Mô phỏng mạch kết nối trên Wokwi.
 ## 3. Công nghệ và linh kiện sử dụng
 
 - **Vi điều khiển:** ESP32 DevKit V1.
