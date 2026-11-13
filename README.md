@@ -83,9 +83,6 @@ Hệ thống sử dụng hai Queue:
 ## 8. Cấu trúc dự án
 
 ```text
-## Cấu trúc dự án
-
-```text
 TruongVanDang_lab3/
 │
 ├── Linkwokwi.zip                 # Tệp chứa liên kết mô phỏng Wokwi
