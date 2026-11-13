@@ -83,14 +83,33 @@ Hệ thống sử dụng hai Queue:
 ## 8. Cấu trúc dự án
 
 ```text
-Lab_3/
-├── README.md
-├── lab3.ino
-├── lab_3.html
-├── diagram.json
-├── libraries.txt
-├── Truong_Van_Dang_lab3.docx
-└── Truong_Van_Dang_N02.zip
+## Cấu trúc dự án
+
+```text
+TruongVanDang_lab3/
+│
+├── Linkwokwi.zip                 # Tệp chứa liên kết mô phỏng Wokwi
+│
+├── README.md                     # Tài liệu giới thiệu và hướng dẫn dự án
+│
+├── Trương Văn Đăng_lab3.docx     # Báo cáo thực hiện bài thực hành Lab 3
+│
+├── lab3.ino                      # Chương trình điều khiển ESP32
+│
+├── lab_3.html                    # Giao diện Web giám sát và điều khiển hệ thống
+│
+└── videomophong.rar              # Video mô phỏng hoạt động của hệ thống
+```
+
+### Mô tả các tệp trong dự án
+
+- **Linkwokwi.zip:** Chứa thông tin liên kết đến mô hình mô phỏng hệ thống trên nền tảng Wokwi.
+- **README.md:** Trình bày thông tin tổng quan, chức năng, công nghệ sử dụng và hướng dẫn thực hiện dự án.
+- **Trương Văn Đăng_lab3.docx:** Báo cáo mô tả quá trình thực hiện, thiết kế, lập trình và kết quả của bài thực hành.
+- **lab3.ino:** Chứa mã nguồn Arduino IDE để lập trình ESP32, đọc dữ liệu cảm biến BMP180, xử lý cảnh báo và giao tiếp MQTT.
+- **lab_3.html:** Xây dựng giao diện Web để hiển thị dữ liệu cảm biến, theo dõi trạng thái và điều khiển LED, Buzzer.
+- **videomophong.rar:** Chứa video minh họa quá trình mô phỏng và hoạt động của hệ thống.
+
 ```
 
 ## 9. Mục tiêu
